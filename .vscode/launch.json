@@ -1,0 +1,65 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File (Integrated Terminal)",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "presentation": {
+                "hidden": false,
+                "group": "0. tests",
+                "order": 0
+            },
+        },
+        {
+            "name": "Generate dataset",
+            "type": "python",
+            "request": "launch",
+            "module": "generate_data",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "presentation": {
+                "hidden": false,
+                "group": "1. Data",
+            },
+        },
+        {
+            "name": "Trajectory classifier - train",
+            "type": "python",
+            "request": "launch",
+            "module": "train_classifier",
+            "args": [
+                "--checkpoint_path",
+                ".data/checkpoints/",
+                "--logs_path",
+                ".data/logs/",
+            ],
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "presentation": {
+                "hidden": false,
+                "group": "2. Trajectory classification",
+                "order": 0
+            },
+        },
+        {
+            "name": "Trajectory classifier - inference",
+            "type": "python",
+            "request": "launch",
+            "module": "inference_classifier",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "presentation": {
+                "hidden": false,
+                "group": "2. Trajectory classification",
+                "order": 1
+            },
+        },
+    ]
+}
