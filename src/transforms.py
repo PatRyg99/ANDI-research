@@ -28,6 +28,19 @@ class Normalized(MapTransform):
         return d
 
 
+class Standardized(MapTransform):
+    """Standarize to mean of 0 and std of 1"""
+
+    def __call__(self, data):
+        d = dict(data)
+        for key in self.key_iterator(d):
+            sample = d[key]
+            sample = np.nan_to_num((sample - sample.mean()) / sample.std())
+
+            d[key] = sample
+        return d
+
+
 class RandomNormalNoised(Randomizable, MapTransform):
     """Random normal noise"""
 

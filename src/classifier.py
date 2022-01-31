@@ -12,12 +12,14 @@ import torch.utils.data
 from torch.nn import CrossEntropyLoss
 import torchmetrics
 
+from kornia.losses.focal import FocalLoss
+
 import monai
 from monai.data import list_data_collate
 from monai.utils import set_determinism
-from monai.transforms import Compose
+from monai.transforms import Compose, AddChanneld
 
-from src.transforms import ToFloatTensord, Normalized, RandomNormalNoised
+from src.transforms import ToFloatTensord, Normalized, Standardized, RandomNormalNoised
 from src.models.trajectorynet import TrajectoryNet
 from configs.train_config import TrainClassifierConfig
 
@@ -47,8 +49,9 @@ class TrajectoryClassifier(pl.LightningModule):
             config.dim,
             config.channels,
             config.classes,
-            config.kernel_size,
             config.stride,
+            config.main_kernel_size,
+            config.branch_kernel_sizes,
         )
 
     def forward(self, x):
@@ -91,6 +94,7 @@ class TrajectoryClassifier(pl.LightningModule):
         # Transforms
         train_tfms = Compose(
             [
+                AddChanneld(keys=[self.trajectory_key]),
                 Normalized(keys=[self.trajectory_key]),
                 RandomNormalNoised(keys=[self.trajectory_key]),
                 ToFloatTensord(keys=[self.trajectory_key, self.label_key]),
@@ -98,6 +102,7 @@ class TrajectoryClassifier(pl.LightningModule):
         )
         val_tfms = Compose(
             [
+                AddChanneld(keys=[self.trajectory_key]),
                 Normalized(keys=[self.trajectory_key]),
                 ToFloatTensord(keys=[self.trajectory_key, self.label_key]),
             ]
@@ -119,6 +124,7 @@ class TrajectoryClassifier(pl.LightningModule):
             num_workers=3,
             collate_fn=list_data_collate,
         )
+
         return train_loader
 
     def val_dataloader(self):

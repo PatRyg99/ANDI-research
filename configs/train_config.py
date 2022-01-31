@@ -17,4 +17,5 @@ class TrainClassifierConfig:
     classes: int = 5
     channels: Tuple[int] = (64, 128, 256, 512)
     stride: int = 1
-    kernel_size: int = 8
+    main_kernel_size: int = 1
+    branch_kernel_sizes: Tuple[int] = (3, 5)
