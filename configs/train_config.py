@@ -16,6 +16,7 @@ class TrainClassifierConfig:
     dim: int = 2
     classes: int = 5
     channels: Tuple[int] = (64, 128, 256, 512)
+    tnets: Tuple[int] = (True, False, False, False)
     stride: int = 1
     main_kernel_size: int = 1
     branch_kernel_sizes: Tuple[int] = (3, 5)

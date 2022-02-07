@@ -7,12 +7,13 @@ import torch.nn as nn
 class ResBlock(nn.Module):
     """Residual block wrapper"""
 
-    def __init__(self, module):
+    def __init__(self, module, residual_module=nn.Identity()):
         super().__init__()
         self.module = module
+        self.residual_module = residual_module
 
     def forward(self, x):
-        return self.module(x) + x
+        return self.module(x) + self.residual_module(x)
 
 
 class MultiBranchBlock(nn.Module):
@@ -26,6 +27,49 @@ class MultiBranchBlock(nn.Module):
         return torch.cat([module(x) for module in self.module_list], dim=1)
 
 
+class TNet(nn.Module):
+    """Transformation network regressing affine matrix to transform trajectory with"""
+
+    def __init__(self, in_channels: int, hidden_channels: int):
+        super().__init__()
+        self.in_channels = in_channels
+
+        self.stem = nn.Sequential(
+            nn.Conv1d(
+                in_channels=in_channels,
+                out_channels=hidden_channels,
+                kernel_size=3,
+                stride=2,
+                bias=True,
+            ),
+            nn.BatchNorm1d(hidden_channels),
+            nn.GELU(),
+            nn.Conv1d(
+                in_channels=hidden_channels,
+                out_channels=hidden_channels,
+                kernel_size=3,
+                stride=2,
+                bias=True,
+            ),
+        )
+
+        self.head = nn.Sequential(
+            nn.Linear(hidden_channels, hidden_channels // 2, bias=True),
+            nn.BatchNorm1d(hidden_channels // 2),
+            nn.GELU(),
+            nn.Linear(hidden_channels // 2, in_channels ** 2, bias=True),
+        )
+
+    def forward(self, x):
+        bs = x.shape[0]
+
+        output = self.stem(x)
+        output = output.max(dim=2)[0]
+        output = self.head(output).reshape(bs, self.in_channels, self.in_channels)
+
+        return output @ x
+
+
 class TrajectoryNet(nn.Module):
     """TrajectoryNet based on PointNet architecture"""
 
@@ -33,6 +77,7 @@ class TrajectoryNet(nn.Module):
         self,
         dim: int,
         channels: Tuple[int],
+        tnets: Tuple[int],
         classes: int,
         stride: int,
         main_kernel_size: int,
@@ -53,6 +98,7 @@ class TrajectoryNet(nn.Module):
                     stride,
                     main_kernel_size,
                     branch_kernel_sizes,
+                    tnets[i],
                 )
                 for i in range(len(channels) - 2)
             ],
@@ -79,10 +125,14 @@ class TrajectoryNet(nn.Module):
         stride: int,
         main_kernel_size: int,
         branch_kernel_sizes: Tuple[int],
+        tnet: bool = False,
     ):
         branch_channels = out_channels // len(branch_kernel_sizes)
 
         return nn.Sequential(
+            TNet(in_channels=in_channels, hidden_channels=branch_channels)
+            if tnet
+            else nn.Identity(),
             nn.Conv1d(
                 in_channels=in_channels,
                 out_channels=branch_channels,
@@ -107,7 +157,18 @@ class TrajectoryNet(nn.Module):
                                 ),
                                 nn.BatchNorm1d(branch_channels),
                                 nn.GELU(),
-                            )
+                                nn.Conv1d(
+                                    in_channels=branch_channels,
+                                    out_channels=branch_channels,
+                                    kernel_size=kernel_size,
+                                    stride=stride,
+                                    padding=(kernel_size - 1) // 2,
+                                    padding_mode="replicate",
+                                    bias=True,
+                                ),
+                                nn.BatchNorm1d(branch_channels),
+                                nn.GELU(),
+                            ),
                         )
                         for kernel_size in branch_kernel_sizes
                     ]

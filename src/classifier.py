@@ -48,6 +48,7 @@ class TrajectoryClassifier(pl.LightningModule):
         self.model = TrajectoryNet(
             config.dim,
             config.channels,
+            config.tnets,
             config.classes,
             config.stride,
             config.main_kernel_size,
